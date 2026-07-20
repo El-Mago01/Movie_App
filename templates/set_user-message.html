@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No user is set. Please select user first</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .error-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+        }
+        h1 {
+            color: #d9534f;
+            margin-top: 0;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .error-code {
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #337ab7;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: #286090;
+        }
+    </style>
+</head>
+<body>
+
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} sticky-bottom">
+                    <p> <strong>Messages: </strong>{{ message }} </p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% if outcome is defined %}
+        {% if outcome.result == 200 %}
+            <div class="sticky-bottom">
+                <p> <strong>Messages: </strong>{{ outcome.message }} </p>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <div class="error-container">
+        <h1>Do the next thing first.</h1>
+        <p id="error-message">
+            The user is not set. Please click button below to continue and select a user from the user menu or create a new user.
+        </p>
+        <p class="error-code" id="error-code"> {{ message }}</p>
+        <a href="/" class="back-button">Return to Home</a>
+    </div>
+
+
+</body>
+</html>

@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title>{{ app_name }}</title>
+{% endblock %}
+
+{% block current_function %}
+{{ current_function }}
+{% endblock %}
+
+{% block function_result %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} sticky-bottom">
+                    <p> <strong>Messages: </strong>{{ message }} </p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% if outcome is defined %}
+        {% if outcome.result == 200 %}
+            <div class="sticky-bottom">
+                <p> <strong>Messages: </strong>{{ outcome.message }} </p>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block active_function %}
+{{ active_function }}
+{% endblock %}
+
+
+
+{% block user_select %}
+<!--    {% if user is not defined or user|length == 0 %}-->
+<!--        <div class="toast show">-->
+<!--            <div class="toast-header">-->
+<!--                No user selected.-->
+<!--                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userSelect">-->
+<!--                    Select User-->
+<!--                </button>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    {% endif %}-->
+    {% if active_user is not none %}<div class="toast show">
+    <div class="toast-header d-flex justify-content-between align-items-center">
+        <!-- Text content with line break -->
+        <div>
+            <h4>Active user:</h4>
+            <h4 class="mb-0"><strong>{{ active_user.user_name }}</strong></h4>
+        </div>
+
+        <!-- Button aligned to the right -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userSelect">
+            Change User
+        </button>
+    </div>
+</div>
+    {% else %}
+        <!--The active_user is not set-->
+        <div class="mb-3 col-md-5 border bg-light">
+            <form action="/select_user" method="post">
+    <!--        User select option box-->
+                <div class="border">
+                    <label for="Users" class="form-label">Select from available users</label>
+                    <select class="form-select" id=Users aria-label="User" name="user_id">
+                        <option value="" selected disabled>
+                            Open this menu with available users
+                        </option>
+                        {% for user in all_users %}
+                            <option value="{{ user.user_id }}">{{ user.user_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p></p>
+                <button type="submit" class="btn btn-primary">
+                    select user
+                </button>
+                <p></p>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- Vertically centered modal -->
+    <div class="modal fade" id="userSelect" tabindex="-1" >
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="userSelectLabel">User Select</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="selectUserForm" action="{{ url_for('select_user') }}"
+                        method="POST"
+                        class="row g-3 align-items-end">
+                        <div class="border">
+                            <label for="avUsers" class="form-label">Select from available users</label>
+                            <select class="form-select" id=avUsers aria-label="User" name="user_id">
+                                    <option value="" selected disabled>
+                                        Open this menu with available users
+                                    </option>
+                                    {% for user in all_users %}
+                                        <option value="{{ user.user_id }}">{{ user.user_name }}</option>
+                                    {% endfor %}
+                            </select>
+                            <p></p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit"  form="selectUserForm" class="btn btn-primary">Change User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block all_movies %}
+<h2>See below the available movies:</h2>
+<!-- Sorting toolbar -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('index') }}"
+              method="GET"
+              class="row g-3 align-items-end">
+
+            <!-- Sort field -->
+            <div class="col-md-5">
+                <label for="sort_by" class="form-label">
+                    Sort by
+                </label>
+
+                <select id="sort_by"
+                        name="sort_by"
+                        class="form-select">
+
+                    <option value="director">Movie</option>
+                    <option value="title">Director</option>
+                </select>
+            </div>
+
+            <!-- Sort direction -->
+            <div class="col-md-5">
+                <label for="direction" class="form-label">
+                    Direction
+                </label>
+
+                <select id="direction"
+                        name="direction"
+                        class="form-select">
+
+                    <option value="asc">Ascending (A–Z)</option>
+                    <option value="desc">Descending (Z–A)</option>
+                </select>
+            </div>
+
+            <!-- Submit button -->
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary">
+                    Sort
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<!--This is the end of the sorting mechanism-->
+
+<!-- This is the search field-->
+<form action="{{ url_for('search_movie') }}" method="GET" class="row g-3 align-items-end">
+    <div class="input-group mb-3">
+<!--        <label for="search">SEARCH</label>-->
+      <input type="text" class="form-control" name="query" id="search"
+             placeholder="Search in movie titles and directors" >
+      <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Search</button>
+    </div>
+</form>
+<!--This is the end of the search field-->
+<!--This is the html/jinja2 for the creation of the movie-cards-->
+{% if all_movies|length != 0 %}
+    <div class="container">
+        <div class="row">
+        {% for movie in all_movies %}
+            <div class="col-lg-3">
+                <div class="card-group" style="margin-top:5px; padding-top: 5px;">
+                    <div class="card p-5 border bg-light" style="height: 550px;">
+                        {% if "not found" in poster_url|lower() %}
+                            <img src="{{ url_for('static', filename='images/default_poster.png') }}" class="card-img-top" alt="Logo">
+                        {% else %}
+                            <img src="{{ poster_url }}" class="img-fluid card-img-top" alt="...">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title"><strong>{{ movie.title }}</strong></h5>
+                            <p class="card-text">{{ movie.director }} ({{ movie.year }})</p>
+                        </div>
+                        <div class="card-body d-flex flex-column"
+                             style="position: absolute;bottom: 0;width: 180px;">
+                            {{ movie.movie_id }}
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Basic Example">
+                                <a href="{{ url_for('update_movie', movie_id=movie.movie_id) }}"
+                                   class="btn btn-outline-primary"
+                                   title="Edit">
+                                    ✏️
+                                </a>
+
+                                <a href="{{ url_for('delete_movie', movie_id=movie_id) }}"
+                                   class="btn btn-outline-danger"
+                                   title="Delete">
+                                    🗑
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+{% endif %}
+<!--This is the end of the movie-card creation-->
+{% endblock %}

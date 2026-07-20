@@ -1,2 +1,11 @@
 TechStack from Movie App assignment:
-- 
+- Flask SQLAlchemy
+- Flask ORM
+- Bootstrap with modals using: 
+  - javascript sending both GET and POST request for the modal
+- Toast (Bootstrap, little window to change user)
+- logging
+- OOP - Object oriented Programming
+- ORM Statements with joins
+- ORM Tables enabling many to many (many-to-many) data connections using a middle table
+- Composite primary key

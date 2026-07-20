@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie App Error</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .error-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+        }
+        h1 {
+            color: #d9534f;
+            margin-top: 0;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .error-code {
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #337ab7;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: #286090;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>Oops! Something went wrong.</h1>
+        <p id="error-message">
+            We encountered an issue while processing your request. Please try again later.
+        </p>
+        <p class="error-code" id="error-code">Error: {{ message }}</p>
+        <a href="/" class="back-button">Return to Home</a>
+    </div>
+
+    <script>
+        // Dynamically set the error code and message based on the URL or server response
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorCode = urlParams.get('code');
+
+            const errorMessageElement = document.getElementById('error-message');
+            const errorCodeElement = document.getElementById('error-code');
+
+            if (errorCode) {
+                errorCodeElement.textContent = `Error: ${errorCode}`;
+
+                // Customize messages based on the error code
+                if (errorCode === '400') {
+                    errorMessageElement.textContent = 'Invalid input. Please check the details and try again.';
+                } else if (errorCode === '404') {
+                    errorMessageElement.textContent = 'The requested page or resource could not be found.';
+                } else if (errorCode === '500') {
+                    errorMessageElement.textContent = 'A server error occurred. We’re working to fix it!';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
