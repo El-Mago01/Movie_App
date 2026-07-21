@@ -2,7 +2,7 @@
 .venv/
 .env
 app.log
-data/
+data/movie_app.sqlite
 .pytest_cache/
 .data/movies.db
 .data/users.db
