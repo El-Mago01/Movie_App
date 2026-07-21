@@ -1,8 +1,10 @@
 from typing import Literal
-from sqlalchemy import select
+from sqlalchemy import select, func, or_
+from sqlalchemy.exc import IntegrityError
+
 from models import db, Movie, User, movie_user
 import logging
-from movie_data_fetcher import fetch_movie_general_data
+from movie_data_fetcher import fetch_movie_general_data, fetch_movie_data
 
 logging.basicConfig(
     filename="app.log",
@@ -48,7 +50,7 @@ class DataManager:
 
 
     def set_active_user(self, user_id):
-        if self.exists(user_id):
+        if self.user_exists(user_id):
             stmt= db.select(User).where(User.user_id == user_id)
             user = db.session.execute(stmt).scalars().all()
             if len(user) == 1:
@@ -60,7 +62,7 @@ class DataManager:
         return None
 
 
-    def exists(self, received_user)->bool:
+    def user_exists(self, received_user)->bool:
         all_users = self.get_all_users()
         if isinstance(received_user, int):
             for user in all_users:
@@ -144,21 +146,174 @@ class DataManager:
     # =========================================================================
 
     def fetch_matching_movies(self, movie_title:str="")->list[Movie]:
-        # potential_movies=fetch_movie_general_data(movie_title)
-        potential_movies = []
+        potential_movies=fetch_movie_general_data(movie_title)
         return potential_movies
 
-    def store_movie(self, movie):
-        pass
+    def create_movie(self, imdbID:str)->Movie|None:
+        """
+        Fetch relevant details for the received imdbID which will be used to create the movie.
+        if movie details are received, create a movie object and store it in the database.
 
-    def get_all_movies_of_active_user(self)->list[Movie|None]:
+        :param imdbID:
+        :return: If no movie details are received return None. Otherwise return the movie object
+        """
+
+        movie_details = fetch_movie_data(imdbID)
+        if len(movie_details) != 0:
+            new_movie = Movie(
+            title = movie_details.get('Title',""),
+            director = movie_details.get('Director', ""),
+            IMDB_id = imdbID,
+            year = movie_details.get('Year', ""),
+            poster_url = movie_details.get('Poster', ""),
+            user_id = self.get_active_user().user_id
+            )
+            return new_movie, f"Movie {new_movie.title} by {new_movie.director }created successfully!"
+        return None, "Error: Movie details could not be fetched. Please try again later"
+
+    def movie_exists(self, imdbID:str)->bool:
+        stmt = db.select(Movie).where(Movie.IMDB_id == imdbID)
+        existing_movies = db.session.execute(stmt).scalars().all()
+        if len(existing_movies) != 0:
+            return True
+        return False
+
+    def store_movie(self, movie):
+        if self.movie_exists(movie.IMDB_id):
+            return None, f"Movie {movie.title} already exists in the database"
+        db.session.add(movie)
+
+        # db.session.flush sends the INSERT to the database so movie.movie_id is generated,
+        # but the transaction is not permanently committed yet. Commitment follows at
+        # db.session.commit
+        db.session.flush()
+        logging.info(f"Connecting movie {movie.movie_id} to user {self.active_user.user_id}")
+        insert_link = movie_user.insert().values(
+            movie_id = movie.movie_id,
+            user_id=self.active_user.user_id
+        )
+        db.session.execute(insert_link)
+        logging.info(f"Connection successfully stored in the movie_user table3: {movie.title} - {movie.director}")
+        db.session.commit()
+        print("added movie:", movie)
+        return movie, f"Movie successfully stored in the DB: {movie.title} - {movie.director}"
+
+
+    def store_manually_added_movie(self, movie:dict)->tuple:
+        if self.get_active_user():
+            new_movie = Movie(
+                title=movie.get('title',""),
+                director=movie.get('director', ""),
+                IMDB_id=movie.get('IMDB_id', ""),
+                year=movie.get('year', ""),
+                poster_url=movie.get('poster_url',""),
+                user_id=self.get_active_user().user_id
+            )
+            try:
+                db.session.add(new_movie)
+                db.session.flush()
+                logging.info(f"Connecting movie {new_movie.movie_id} to user {self.active_user.user_id}")
+                insert_link = movie_user.insert().values(
+                    movie_id=new_movie.movie_id,
+                    user_id=self.active_user.user_id
+                )
+                db.session.execute(insert_link)
+                logging.info(f"Connection successfully stored in the movie_user table3: {new_movie.title} - {new_movie.director}")
+                db.session.commit()
+            except IntegrityError as e:
+                logging.info(f"An error occurred while storing the movie: {e}")
+                return new_movie, "An error occurred while storing the movie"
+            print("added movie:", new_movie)
+        return None, "An error occurred while storing the movie"
+
+
+    def get_all_movies_of_active_user(self, sorting_command:dict)->list[Movie|None]:
         """
         returns a list of all movies for the active user
         :return:
         """
-        stmt = db.select(Movie).join(
-            movie_user, Movie.movie_id == movie_user.c.movie_id,).join(
-            User, User.user_id == movie_user.c.user_id).order_by(Movie.title.asc())
+        active_user_id = self.get_active_user().user_id
+        if sorting_command['sort_by'] == 'movies':
+            if sorting_command['direction'] == 'asc':
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id,).join(
+                    User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.title.asc())
+            else:
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                    User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.title.desc())
+        else:
+            if sorting_command['direction'] == 'asc':
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id,).join(
+                    User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.director.asc())
+            else:
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                    User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.director.desc())
         movies=db.session.execute(stmt).scalars().all()
         # movies = []
         return movies
+
+    def get_movie(self, movie_id:int)->Movie|None:
+        """
+
+        :param movie_id:
+        :return:
+        """
+        stmt = db.select(Movie).where(Movie.movie_id == movie_id)
+        movie = db.session.execute(stmt).scalars().one()
+        return movie
+
+    def search_for_titles_and_directors(self, query: str, sorting_command:dict) -> list[Movie|None]:
+        """
+        Enables the search in the database using "%like%" SQL search, case-insensitive. The outcome is sored based
+        upon user demands
+        :param query: the searchstring
+        :param sorting_command: user demands for sorting the output
+        :return:
+        """
+        found_movies = []
+        query = "%" + query.strip().lower() + "%"
+        if sorting_command["sort_by"] == "title":
+            if sorting_command["direction"] == "asc":
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                        User, User.user_id == movie_user.c.user_id).where(
+                            or_(
+                                func.lower(Movie.title.like(query)),
+                                func.lower(Movie.director.like(query)),
+                            )
+                        ).order_by(Movie.title.asc())
+            else:
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                        User, User.user_id == movie_user.c.user_id).where(
+                            or_(
+                                func.lower(Movie.title.like(query)),
+                                func.lower(Movie.director.like(query)),
+                            )
+                        ).order_by(Movie.title.desc())
+        else:
+            if sorting_command["direction"] == "asc":
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                        User, User.user_id == movie_user.c.user_id).where(
+                            or_(
+                                func.lower(Movie.title.like(query)),
+                                func.lower(Movie.director.like(query)),
+                            )
+                        ).order_by(Movie.director.asc())
+            else:
+                stmt = db.select(Movie).join(
+                    movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+                    User, User.user_id == movie_user.c.user_id).where(
+                    or_(
+                        func.lower(Movie.title.like(query)),
+                        func.lower(Movie.director.like(query)),
+                    )
+                ).order_by(Movie.director.desc())
+        search_result = db.session.execute(stmt).scalars().all()
+
+        # print(search_result, type(search_result))
+        return search_result

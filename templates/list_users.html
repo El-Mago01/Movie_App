@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title>{{ app_name }}</title>
+{% endblock %}
+
+{% block current_function %}
+{{ current_function }}
+{% endblock %}
+
+{% block function_result %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} sticky-bottom">
+                    <p> <strong>Messages: </strong>{{ message }} </p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% if outcome is defined %}
+        {% if outcome.result == 200 %}
+            <div class="sticky-bottom">
+                <p> <strong>Messages: </strong>{{ outcome.message }} </p>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+<!--{% block active_function %}-->
+<!--{{ active_function }}-->
+<!--{% endblock %}-->
+
+
+{% block all_users %}
+<h2>The available users:</h2>
+
+
+{% if all_users|length != 0 %}
+    <div class="container">
+        <form action="{{ url_for('select_user') }}"
+                method="POST"
+                id="list_users">
+            <div class="row">
+                {% for user in all_users %}
+                    <div class="col-lg-3">
+                        <div class="card-group" style="margin-top:5px; padding-top: 5px;">
+                            <div class="card p-5 border bg-light" style="height: 250px;">
+                                <div class="card-body">
+                                    <h5 class="card-title"><strong>{{ user.user_name }}</strong></h5>
+                                </div>
+                                <div class="card-body d-flex flex-column"
+                                     style="position: absolute;bottom: 0;width: 180px;">
+                                    <div class="input-group">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input mt-0"
+                                                   type="radio"
+                                                   name="user_id"
+                                                   value="{{ user.user_id }}"
+                                                   aria-label="Radio button for following text input">
+                                        </div>
+<!--                                            <input type="text" class="form-control" aria-label="Text input with radio button">-->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit"  form="list_users" class="btn btn-primary">Select user</button>
+            </div>
+        </form>
+
+    </div>
+{% endif %}
+<!--This is the end of the user-card creation-->
+{% endblock %}

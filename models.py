@@ -29,8 +29,8 @@ class Movie(db.Model):
     movie_id = db.Column(db.Integer, primary_key=True , nullable=False, autoincrement=True)
     title = db.Column(db.String(100), nullable=False)
     director = db.Column(db.String(100), nullable=False)
-    IMDB_id = db.Column(db.Integer, unique=True, nullable=False)
-    year = db.Column(db.Integer)
+    IMDB_id = db.Column(db.String, nullable=False)
+    year = db.Column(db.String)
     poster_url = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
 

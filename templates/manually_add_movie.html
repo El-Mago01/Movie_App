@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title>"Updating a Movie"</title>
+{% endblock %}
+
+{% block current_function %}
+{{ current_function }}
+{% endblock %}
+
+{% block update_movie %}
+    <form action="/manually_add_movie" method="post">
+        
+            <div class="col-sm-6 p-5 border bg-light">
+            <label for="movieTitle" class="form-label">Movie title</label>
+            <input type="text" class="form-control" id="movieTitle" name="movie_title" placeholder="The name of the movie">
+
+            <label for="Director" class="col-sm-5 form-label">Director</label>
+            <input type="text" class="form-control" id="Director" name="director" placeholder="The director">
+
+            <label for="imdbID" class="form-label col-sm-5">IMDB_id</label>
+            <input type="text" class="form-control" id="imdbID" name="IMDB_id" placeholder="tt0123456">
+
+            <label for="Year" class="col-sm-5 form-label">Year</label>
+            <input type="text" class="form-control" id="Year" name="year" placeholder="2012">
+
+            <label for="poster_url" class="form-label">Cover-image source</label>
+            <input type="text" class="form-control" id="poster_url" name="poster_url" placeholder="https://movie_poster.com/....">
+
+        </div>
+
+        <div class="col-sm-6 p-5 border bg-light">
+            <button type="submit" value="Add-Movie">
+                Add Movie
+            </button>
+        </div>
+    </form>
+
+{% endblock %}
+

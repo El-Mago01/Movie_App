@@ -29,6 +29,8 @@
                             <li><a class="dropdown-item" href="/user_admin">add user</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/user_admin">User admin</a></li>
+                            <li><a class="dropdown-item" href="/list_users">List users</a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#updateUserModal">Update active user</a></li>
                             <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#deleteUserModal">Delete active user</a></li>
 
@@ -39,25 +41,14 @@
                         Movies
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="addMovieModal">Search & add</a></li>
+                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addMovieModal">Search & add</a></li>
                             <li><a class="dropdown-item" href="/manually_add_movie">Manually add</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('index') }}">List all</a></li>
-                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nameModalmovie">Edit movie</a></li>
-                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nameModalDelmovie">Delete movie</a></li>
+<!--                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nameModalMovie">Edit movie</a></li>-->
+<!--                            <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nameModalDelmovie">Delete movie</a></li>-->
                         </ul>
                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Categories (WIP)
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">New Category</a></li>
-                            <li><a class="dropdown-item" href="#">Connect with movie</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#">List all</a></li>
-                        </ul>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -73,124 +64,92 @@
 <!--    Modal boxes for User Management-->
 <!-- ---------------------------------------------------- -->
 <!-- Modal Edit User-->
-<div class="modal fade" id="updateUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Enter the new name for the active user</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <label for="userName">Enter new username</label>
-                <input type="text" id="userName" class="form-control" placeholder="New user name">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
-                        onclick="submitUpdateUser()">OK</button>
+    <div class="modal fade" id="updateUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enter the new name for the active user</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="userName">Enter new username</label>
+                    <input type="text" id="userName" class="form-control" placeholder="New user name">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                            onclick="submitUpdateUser()">OK</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 
 <!-- Modal Delete User-->
-<div class="modal fade" id="deleteUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Deletion of active user</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <label for="userNameDel">For confirmation type active username:</label>
-                <input type="text" id="userNameDel" class="form-control" placeholder="User name of active user">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="submitDeleteUser()">OK</button>
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Deletion of active user</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="userNameDel">For confirmation type active username:</label>
+                    <input type="text" id="userNameDel" class="form-control" placeholder="User name of active user">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="submitDeleteUser()">OK</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 
 
 <!-- ---------------------------------------------------- -->
 <!--    Modal boxes for Movie Management-->
 <!-- ---------------------------------------------------- -->
-
-<!--<div class="modal fade" id="addMovieModal" tabindex="-1">-->
-<!--    <div class="modal-dialog">-->
-<!--        <div class="modal-content">-->
-<!--            <div class="modal-header">-->
-<!--                <h5 class="modal-title">Enter the ID of the movie to be edited</h5>-->
-<!--                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>-->
-<!--            </div>-->
-<!--                <div class="modal-body">-->
-<!--                    <input type="number" id="movieId" class="form-control" placeholder="Movie ID">-->
-<!--                </div>-->
-<!--            <div class="modal-footer">-->
-<!--                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>-->
-<!--                <button type="button" class="btn btn-primary" onclick="submitMovie()">OK</button>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</div>-->
-
-<!-- Modal Add movie-->
-<div class="modal fade" id="addMovieModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ url_for('add_movie') }}" method="POST">
+<!--Add a new movie. Provide a box to enter the title-->
+    <div class="modal fade" id="addMovieModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add User: provide title</h5>
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal">
-                    </button>
+                    <h5 class="modal-title">Search and add a movie</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-<!--                    <button type="button"-->
-<!--                            class="btn-close"-->
-<!--                            data-bs-dismiss="modal">-->
-<!--                    </button>-->
-                    <label for="movie_title" class="form-label">
-                        movie title:
-                    </label>
-                    <input type="text"
-                           class="form-control"
-                           id="movie_title"
-                           name="title"
-                           required>
+                    <label for="movieTitle">Enter the title</label>
+                    <input type="text" id="movieTitle" class="form-control" placeholder="Title of the movie">
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">
-                        Search movies
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                            onclick="submitAddMovie()">Add Movie</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="modal fade" id="nameModalDelMovie" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Enter the ID of the movie to be deleted</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="number" id="movieIdDel" class="form-control" placeholder="Movie ID">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitMovieDel()">OK</button>
+
+    <div class="modal fade" id="nameModalDelMovie" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enter the ID of the movie to be deleted</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="movieIdDel">Enter the title</label>
+                    <input type="number" id="movieIdDel" class="form-control" placeholder="Movie ID">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitMovieDel()">OK</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 
 
@@ -212,6 +171,8 @@
             {% endblock%}
             {% block add_movie %}
             {% endblock%}
+            {% block update_movie %}
+            {% endblock%}
             {% block add_user %}
             {% endblock%}
             {% block function_result %}
@@ -220,88 +181,134 @@
 
         </div>
     </section>
-<script>
-    async function submitUpdateUser() {
-        const userName = document.getElementById("userName").value.trim();
-        const body = new URLSearchParams();
-        body.append("new_user_name", userName);
-        console.log("submitUpdateUser is triggered with new_user_name", userName);
-        const response = await fetch("/update_user", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: body.toString()
-        });
+    <script>
+        // ============================================================================
+        //                    User management javascript functions
+        // ============================================================================
+        // ----------------------------------------------------------------------------
+        //                    submitUpdateUser.
+        // Ensures the fetching of the userName from the modal and sends it to route
+        // '/update_user'
+        // ----------------------------------------------------------------------------
+        async function submitUpdateUser() {
+            const userName = document.getElementById("userName").value.trim();
+            const body = new URLSearchParams();
+            body.append("new_user_name", userName);
+            console.log("submitUpdateUser is triggered with new_user_name", userName);
+            const response = await fetch("/update_user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: body.toString()
+            });
 
-        if (response.ok) {
-            console.log("userName updated successfully.");
-            window.location.reload();
-        } else {
-            document.documentElement.innerHTML = await response.text();
+            if (response.ok) {
+                console.log("userName updated successfully.");
+                window.location.reload();
+            } else {
+                document.documentElement.innerHTML = await response.text();
+            }
         }
-    }
-// THIS IS THE SAME submitUpdateUser() function but than with GET message!
-//     function submitUpdateUser() {
-//         const userId = document.getElementById("userId").value.trim();
-//         console.log("Hello submitUpdateUser is triggered with userId", userId);
-//
-//         if (!userId) {
-//             return;
-//     }
-//
-//         window.location.href =
-//             `/update_user?user_id=${encodeURIComponent(userId)}`;
-// }
+    // THIS IS THE SAME submitUpdateUser() function but than with GET message!
+    //     function submitUpdateUser() {
+    //         const userId = document.getElementById("userId").value.trim();
+    //         console.log("Hello submitUpdateUser is triggered with userId", userId);
+    //
+    //         if (!userId) {
+    //             return;
+    //     }
+    //
+    //         window.location.href =
+    //             `/update_user?user_id=${encodeURIComponent(userId)}`;
+    // }
 
+        // ----------------------------------------------------------------------------
+        //                    submitDeleteUser.
+        // Ensures the fetching of the userNameDel from the modal and sends it to route
+        // '/delete_user'
+        // ----------------------------------------------------------------------------
+        async function submitDeleteUser() {
+            const user_name_to_delete = document.getElementById("userNameDel").value.trim();
+            const body = new URLSearchParams();
+            body.append("user_name_to_delete", user_name_to_delete);
+            console.log("submitDeleteUser is triggered with user_name_to_delete:", user_name_to_delete);
 
-    async function submitDeleteUser() {
-        const user_name_to_delete = document.getElementById("userNameDel").value.trim();
-        const body = new URLSearchParams();
-        body.append("user_name_to_delete", user_name_to_delete);
-        console.log("submitDeleteUser is triggered with user_name_to_delete:", user_name_to_delete);
+            const response = await fetch("/delete_user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: body.toString()
+            });
 
-        const response = await fetch("/delete_user", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: body.toString()
-        });
-
-        if (response.ok) {
-            console.log("user_name_to_delete deleted successfully.");
-            window.location.reload();
-        } else {
-            document.documentElement.innerHTML = await response.text();
+            if (response.ok) {
+                console.log("user_name_to_delete deleted successfully.");
+                window.location.reload();
+            } else {
+                document.documentElement.innerHTML = await response.text();
+            }
         }
-    }
 
-    function submitMovieDel() {
-        const movieId = document.getElementById("movieIdDel").value.trim();
-        console.log("Hello submitMovie is triggered with movie ID:", movieId);
+        // ============================================================================
+        //                    Movie management javascript functions
+        // ============================================================================
 
-        if (!movieId) {
-            console.log("No movieId found!")
-            return;
-    }
+        // ----------------------------------------------------------------------------
+        //                    submitAddMovie.
+        // Ensures the fetching of the movieTitle from the modal and sends it to route
+        // '/add_movie'
+        // ----------------------------------------------------------------------------
+        async function submitAddMovie() {
+            console.log("Hello World")
+            const movieTitle = document.getElementById("movieTitle").value.trim();
+            console.log("Hello submitAddMovie is triggered with movie title:", movieTitle);
+            const body = new URLSearchParams();
 
-        window.location.href =
-            `/delete_movie?movie_id=${encodeURIComponent(movieId)}`;
-}
-    function submitMovie() {
-        const movieId = document.getElementById("movieId").value.trim();
-        console.log("Hello submitMovie is triggered with movie ID:", movieId);
+            if (!movieTitle) {
+                console.log("No movieTitle found!")
+                return;
+            }
+            body.append("movie_title", movieTitle);
+            console.log("submitAddMovie is triggered with movie_title:", movieTitle);
+            const response = await fetch("/add_movie", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: body.toString()
+            });
 
-        if (!movieId) {
-            console.log("No movieId found!")
-            return;
-    }
+            if (response.ok) {
+                console.log("user_name_to_delete deleted successfully.");
+                document.documentElement.innerHTML = await response.text()
+                // window.location.reload();
+            } else {
+                document.documentElement.innerHTML = await response.text();
+            }
+            // window.location.href =
+            //     `/update_movie?movie_id=${encodeURIComponent(movieId)}`;
+        }
 
-        window.location.href =
-            `/update_movie?movie_id=${encodeURIComponent(movieId)}`;
-}
-</script>
+        // ----------------------------------------------------------------------------
+        //                    submitMovieDel.
+        // Ensures the fetching of the movieIdDel from the modal and sends it to route
+        // '/delete_movie'
+        // ----------------------------------------------------------------------------
+        function submitMovieDel() {
+            const movieId = document.getElementById("movieIdDel").value.trim();
+            console.log("Hello submitMovie is triggered with movie ID:", movieId);
+
+            if (!movieId) {
+                console.log("No movieId found!")
+                return;
+            }
+
+            window.location.href =
+                `/delete_movie?movie_id=${encodeURIComponent(movieId)}`;
+        }
+
+    </script>
 </body>
 
 </html>

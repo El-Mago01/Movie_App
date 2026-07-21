@@ -42,7 +42,7 @@ def analyze_user_input(user_id:str)->int:
     else:
         try:
             received_user_id = int(user_id)
-            if dm.exists(received_user_id):
+            if dm.user_exists(received_user_id):
                 return received_user_id
         except ValueError as e:
             return -1
@@ -75,11 +75,15 @@ def index():
     all_users = dm.get_all_users()
     active_user=dm.get_active_user()
     logging.info(f"index page requested")
+    sorting_command = {
+        "sort_by": request.args.get("sort_by", "movies"),
+        "direction": request.args.get("direction", "asc"),
+    }
 
     if len(all_users) > 0:
         if active_user is not None:
             # active user is set. Show the user's movies
-            all_movies=dm.get_all_movies_of_active_user()
+            all_movies=dm.get_all_movies_of_active_user(sorting_command)
             if all_movies is not None:
                 print(active_user.user_name)
                 if len(all_movies) == 0:
@@ -116,6 +120,7 @@ def index():
                                outcome=outcome,
                                current_function="User administration window",
                                active_user=active_user)
+
 
 
 @app.route('/add_user', methods=['POST'])
@@ -155,6 +160,31 @@ def add_user():
     flash(f"New user {new_user.user_name} stored in the database", "info")
     # db.session["current_function"] = "Display user's movies and menu"
     return redirect(url_for("index"))
+
+@app.route('/list_users', methods=['GET'])
+def list_users():
+    all_users=dm.get_all_users()
+    if all_users is not None:
+        return render_template("list_users.html",
+                           app_name=app_name,
+                           current_function="Listing of available users",
+                           all_users=all_users,
+        )
+    abort(400, description="There are no users yet in the DB. Please add them via the user administration tool")
+
+
+@app.route('/select_user', methods=['POST'])
+def select_user():
+    received_user_id = request.form.get('user_id', "")
+    logging.info(f"Received a request to change the active user to: {received_user_id}")
+    received_user_id = analyze_user_input(received_user_id)
+    if received_user_id == -1:
+        abort(404, description=f"Received user_id {received_user_id} not correct")
+    active_user = dm.set_active_user(received_user_id)
+    if active_user is not None:
+        return redirect(url_for("index"), 302)
+    return render_template("set_user-message.html")
+
 
 @app.route('/user_admin', methods=['GET'])
 def user_admin():
@@ -301,69 +331,187 @@ def update_user():
     abort(500, description=f"Unable to update the name of provided user id {user_id_to_update}")
 
 
-@app.route('/select_user', methods=['POST'])
-def select_user():
-    received_user_id = request.form.get('user_id', "")
-    logging.info(f"Received a request to change the active user to: {received_user_id}")
-    received_user_id = analyze_user_input(received_user_id)
-    if received_user_id == -1:
-        abort(404, description=f"Received user_id {received_user_id} not correct")
-    active_user = dm.set_active_user(received_user_id)
-    if active_user is not None:
-        all_users = dm.get_all_users()
-        outcome = {"result": 200, "message": f"User {active_user.user_name} is now active"}
-        return render_template("index.html",
-                               app_name=app_name,
-                               all_users=all_users,
-                               current_function="Display user's movies and menu",
-                               active_user=active_user,
-                               outcome=outcome
-                               )
-    return render_template("set_user-message.html")
+
 
 """
 ------------------------------------------------------------------------------------------
 All endpoints definitions related to movie management
 ------------------------------------------------------------------------------------------
 """
-@app.route('/add_movie')
+@app.route('/add_movie', methods=['POST'])
 def add_movie():
-    requested_title = request.form.get('title', "")
+    requested_title = request.form.get('movie_title', "")
     if requested_title == "":
         abort(404, description=f"Received title '{requested_title}' not correct")
-    dm.fetch_matching_movies(requested_title)
+    found_movies=dm.fetch_matching_movies(requested_title)
+    if len(found_movies) == 0:
+        abort(400, description=f"No movies found for title '{requested_title}'")
+    outcome = {'result': 200, 'message':"Found movies with the provided title. Please select the ones you want to add"}
+    return render_template("select_movie.html",
+                           app_name=app_name,
+                           current_function="Select movie to be added to the DB",
+                           outcome=outcome,
+                           found_movies=found_movies)
 
 
+@app.route('/store_selected_movies', methods=['POST'])
+def store_selected_movies():
+    selected_movies = request.form.getlist('selected_movies')
+    if dm.get_active_user() is None:
+        abort(404, description="Active user is not set")
+    for movie_imdbID in selected_movies:
+        new_movie, message = dm.create_movie(movie_imdbID)
+        if new_movie is not None:
+            movie_stored, result = dm.store_movie(new_movie)
+            if movie_stored is None:
+                logging.warning(result)
+            else:
+                logging.info(result)
+        else:
+            logging.warning(message)
+        print(message)
+    return redirect(url_for("index"), 302)
 
-@app.route('/delete_movie')
+@app.route('/manually_add_movie', methods=['POST','GET'])
+def manually_add_movie():
+    """
+    Enables the manually adding of a new movie, e.g. when the movie is not stored in the imdb Data base.
+
+    :return:
+    """
+    if request.method == 'GET':
+        return render_template(
+            "manually_add_movie.html",
+
+            current_function="Manually add a new movie"
+        )
+    updated_title=request.form.get("movie_title", "")
+    updated_year=request.form.get("year", "-1")
+    updated_director=request.form.get("director", "")
+    updated_imdbID=request.form.get("IMDB_id", "")
+    updated_poster_url=request.form.get("poster_url", "")
+    new_movie_dict={
+        'title': updated_title,
+        'year' : updated_year,
+        'director' : updated_director,
+        'IMDB_id' : updated_imdbID,
+        'poster_url' : updated_poster_url,
+    }
+    dm.store_manually_added_movie(new_movie_dict)
+    return redirect(url_for("index"), 302)
+
+@app.route('/delete_movie', methods=['GET'])
 def delete_movie():
-    pass
+    """
+     Delete a movie from the DB based upon input parameter "movie_id"
+     :param movie_id, identifying the movie to be deleted
+     :return:
+     """
+    received_movie_id = request.args.get('movie_id', "")
+    try:
+        movie_id = int(received_movie_id)
+    except ValueError as e:
+        abort(500, description=e)
+
+    if movie_id == -1:
+        abort(404, description=f"Incorrect movie_id received")
+
+    movie_to_delete = dm.get_movie(movie_id)
+    db.session.delete(movie_to_delete)
+    db.session.commit()
+    return redirect(url_for("index"), 302)
 
 
-@app.route('/get_movies')
-def get_movies():
-    pass
-
-
-@app.route('/update_movie')
+@app.route('/update_movie', methods=['GET'])
 def update_movie():
-    pass
+    received_movie_id = request.args.get('movie_id', "-1")
+    try:
+        received_movie_id = int(received_movie_id)
+    except ValueError:
+        abort(400, description="Received movie id is not an integer")
+    if received_movie_id != -1:
+        movie_to_update=dm.get_movie(received_movie_id)
+        return render_template("update_movie.html",
+                               app_name=app_name,
+                               current_function="Update of a selected movie",
+                               movie_to_update=movie_to_update,
 
+    )
+    abort(404, description="No movie id provided")
 
-@app.route('/search_movie')
+@app.route('/updated_movie', methods=['POST'])
+def updated_movie():
+    """
+        The user returned the form with the changes to the movie elements. This endpoint takes care
+        that these changes are correctly stored in the database.
+        :return:
+        """
+    received_movie_id = request.form.get('movie_id', "")
+    try:
+        movie_id = int(received_movie_id)
+
+    except ValueError as e:
+        abort(500, description=f"Update failed due to : {e}")
+    updated_title = request.form.get("title", "")
+    updated_year = request.form.get("year", "-1")
+    updated_director = request.form.get("director", "")
+    updated_imdbID = request.form.get("IMDB_id", "")
+    updated_poster_url = request.form.get("poster_url", "")
+
+    movie_to_update = dm.get_movie(movie_id)
+    if len(updated_title) != 0:
+        movie_to_update.title = updated_title
+    if len(updated_year) != -1:
+        movie_to_update.year = updated_year
+    if len(updated_director) != 0:
+        movie_to_update.director = updated_director
+    if len(updated_imdbID) != 0:
+        movie_to_update.olid_book_id = updated_imdbID
+    if len(updated_poster_url) != 0:
+        movie_to_update.cover_img = updated_poster_url
+
+    db.session.commit()
+
+    return redirect(url_for("index"), 302)
+
+@app.route('/search_movie', methods=['GET'])
 def search_movie():
-    pass
+    """
+    Searches the DB within both the movie titles and the director name for a match with the received
+    query. The query is made case insensitive. and uses the SQL "%like%" form.
+    :return:
+    """
+    search_query = request.args.get("query", "")
+    sort_command = {"sort_by": "title", "direction": "asc"}
+    if search_query == "":
+        abort(404, description="Provided search query is empty")
+
+    sorted_movies = dm.search_for_titles_and_directors(search_query, sort_command)
+    if len(sorted_movies) == 0:
+        outcome = {
+            "message": f'No matching books or authors found for: "{search_query}"',
+            "result": 200,
+        }
+    else:
+        outcome = {
+            "message": f'Search successful: "{search_query}"',
+            "result": 200}
+    return render_template(
+        "index.html",
+        app_name=app_name,
+        active_user=dm.get_active_user(),
+        all_movies=sorted_movies,
+        current_function="Search movie titles or directors",
+        outcome=outcome,
+    )
 
 
-# @app.errorhandler(404)
-# def wrong_user_input(e):
-#     """
-#     Abort when wrong user input is received
-#     :param e:
-#     :return:
-#     """
-#     return render_template("error.html", code=404, message=e.description), 404
 
+"""
+------------------------------------------------------------------------------------------
+Error handling
+------------------------------------------------------------------------------------------
+"""
 @app.errorhandler(404)
 def wrong_user_input(e):
     return render_template("error.html", code=404, message=e.description), 404

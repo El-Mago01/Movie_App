@@ -1,0 +1,143 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title>{{ app_name }}</title>
+{% endblock %}
+
+{% block current_function %}
+{{ current_function }}
+{% endblock %}
+
+{% block function_result %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} sticky-bottom">
+                    <p> <strong>Messages: </strong>{{ message }} </p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% if outcome is defined %}
+        {% if outcome.result == 200 %}
+            <div class="sticky-bottom">
+                <p> <strong>Messages: </strong>{{ outcome.message }} </p>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+<!--{% block active_function %}-->
+<!--{{ active_function }}-->
+<!--{% endblock %}-->
+
+
+{% block all_movies %}
+<h2>See below the movies found with this title:</h2>
+<!-- Sorting toolbar -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('index') }}"
+              method="GET"
+              class="row g-3 align-items-end">
+
+            <!-- Sort field -->
+            <div class="col-md-5">
+                <label for="sort_by" class="form-label">
+                    Sort by
+                </label>
+
+                <select id="sort_by"
+                        name="sort_by"
+                        class="form-select">
+
+                    <option value="director">Movie</option>
+                    <option value="title">Director</option>
+                </select>
+            </div>
+
+            <!-- Sort direction -->
+            <div class="col-md-5">
+                <label for="direction" class="form-label">
+                    Direction
+                </label>
+
+                <select id="direction"
+                        name="direction"
+                        class="form-select">
+
+                    <option value="asc">Ascending (A–Z)</option>
+                    <option value="desc">Descending (Z–A)</option>
+                </select>
+            </div>
+
+            <!-- Submit button -->
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary">
+                    Sort
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!--&lt;!&ndash; This is the search field&ndash;&gt;-->
+<!--<form action="{{ url_for('search_movie') }}" method="GET" class="row g-3 align-items-end">-->
+<!--    <div class="input-group mb-3">-->
+<!--&lt;!&ndash;        <label for="search">SEARCH</label>&ndash;&gt;-->
+<!--      <input type="text" class="form-control" name="query" id="search"-->
+<!--             placeholder="Search in movie titles and directors" >-->
+<!--      <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Search</button>-->
+<!--    </div>-->
+<!--</form>-->
+<!--This is the end of the search field-->
+<!--This is the html/jinja2 for the creation of the movie-cards-->
+{% if found_movies|length != 0 %}
+    <div class="container">
+        <form action="{{ url_for('store_selected_movies') }}"
+                method="POST"
+                id="selectMovieForm">
+            <div class="row">
+
+                {% for movie in found_movies %}
+                    <div class="col-lg-3">
+                        <div class="card-group" style="margin-top:5px; padding-top: 5px;">
+                            <div class="card p-5 border bg-light" style="height: 550px;">
+                                {% if "not found" in poster_url|lower() %}
+                                    <img src="{{ url_for('static', filename='images/default_poster.png') }}" class="card-img-top" alt="Logo">
+                                {% else %}
+                                    <img src="{{ movie.Poster }}" class="img-fluid card-img-top" alt="...">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title"><strong>{{ movie.Title }}</strong></h5>
+                                    <p class="card-text"> ({{ movie.Year }} - {{ movie.Type }})</p>
+                                </div>
+                                <div class="card-body d-flex flex-column"
+                                     style="position: absolute;bottom: 0;width: 180px;">
+                                    {{ movie.imdbID }}
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input mt-0"
+                                                   type="checkbox"
+                                                   name="selected_movies"
+                                                   value="{{ movie.imdbID }}"
+                                                   aria-label="Checkbox for movie selection">
+                                        </div>
+        <!--                                    <input type="text" class="form-control" aria-label="Text input with checkbox">-->
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit"  form="selectMovieForm" class="btn btn-primary">Add selected movies</button>
+            </div>
+        </form>
+
+    </div>
+{% endif %}
+<!--This is the end of the movie-card creation-->
+{% endblock %}

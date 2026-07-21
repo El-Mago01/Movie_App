@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title>"Updating a Movie"</title>
+{% endblock %}
+
+{% block current_function %}
+{{ current_function }}
+{% endblock %}
+
+{% block update_movie %}
+{% if movie_to_update is defined and movie_to_update is not none %}
+    <form action="/updated_movie" method="post">
+
+        <input
+            type="hidden"
+            name="movie_id"
+            value="{{ movie_to_update.movie_id }}"
+        >
+
+        <div class="col-sm-6 p-5 border bg-light">
+            <label for="movieTitle" class="form-label">Movie title</label>
+            <input type="text" class="form-control" id="movieTitle" name="movie_title" placeholder="{{ movie_to_update.title }}">
+
+            <label for="Director" class="col-sm-5 form-label">Director</label>
+            <input type="text" class="form-control" id="Director" name="director" placeholder="{{ movie_to_update.director }}">
+
+            <label for="imdbID" class="form-label col-sm-5">IMDB_id</label>
+            <input type="text" class="form-control" id="imdbID" name="IMDB_id" placeholder="{{ movie_to_update.IMDB_id }}">
+
+            <label for="Year" class="col-sm-5 form-label">Year</label>
+            <input type="text" class="form-control" id="Year" name="year" placeholder="{{ movie_to_update.year }}">
+
+            <label for="coverImage" class="form-label">Cover-image source</label>
+            <input type="text" class="form-control" id="coverImage" name="cover_image" placeholder="{{ movie_to_update.poster_url }}">
+
+        </div>
+
+        <div class="col-sm-6 p-5 border bg-light">
+            <button type="submit" value="Update-Movie">
+                Update Movie
+            </button>
+        </div>
+    </form>
+{% else %}
+    <h2>Something went wrong, no movie to update</h2>
+{% endif %}
+
+{% endblock %}
+

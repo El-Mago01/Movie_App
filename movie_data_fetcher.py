@@ -1,8 +1,8 @@
 from data_manager import logging
 import os
 import requests
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 api_key = os.getenv("apikey")
 BASE_URL = "https://www.omdbapi.com/"
 
@@ -22,17 +22,17 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
         try:
             if imdbID != "":  # the imdbID is the main search key
                 search_term = f"?apikey={api_key}&i={imdbID}"
-                url = BASE_URL + specify_search_term(imdbID, "")
+                url = BASE_URL + search_term
                 print(url)
 
             elif title != "":  # the title is the main search key
                 search_term = f"?apikey={api_key}&s={title}"
-                url = BASE_URL + specify_search_term("", title)
+                url = BASE_URL + search_term
                 print(url)
             else:
                 # Should not occur. Either, imdbID or title must be provided
                 return ""
-            return search_term
+            return url
         # pylint: disable=broad-exception-caught
         # Any type of connection failure is caught
         except Exception as e:
@@ -44,15 +44,15 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
     imdb_url = specify_search_term(imdbID, title)
 
     try:
-        response = requests.get(imdb_url, timeout=5)
+        response = requests.get(imdb_url, timeout=15)
         movie_details = response.json()
         # pylint: disable=broad-exception-caught
-        # Any type of connection failure is caucht
+        # Any type of connection failure is caught
     except Exception as e:
         logging.info(f"Could not access API: GET Request failed:\n{e}")
         movie_details = {}
         return movie_details
-    if movie_details["Response"] == "False":  # the json contains an invalid response
+    if response.status_code != 200:  # the json contains an invalid response
         logging.info("Movie not found!.")
         movie_details = {}
     return movie_details
