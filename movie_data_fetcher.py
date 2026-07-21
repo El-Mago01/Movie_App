@@ -53,7 +53,7 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
         movie_details = {}
         return movie_details
     if response.status_code != 200:  # the json contains an invalid response
-        logging.info("Movie not found!.")
+        logging.info(f"Unable to search for movie in omdb db. Error: {response.content}")
         movie_details = {}
     return movie_details
 
