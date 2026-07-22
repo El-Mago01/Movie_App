@@ -6,6 +6,8 @@ import requests
 api_key = os.getenv("apikey")
 BASE_URL = "https://www.omdbapi.com/"
 
+MIN_LENGTH_TITLE=5
+
 
 def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
     """
@@ -18,7 +20,7 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
 
     logging.info(f"Request received to fetch movie information with imdbID={imdbID}, title={title}")
 
-    def specify_search_term(imdbID: str = "0", title: str = "") -> str:
+    def specify_search_term(imdbID:str="", title:str="") -> str:
         try:
             if imdbID != "":  # the imdbID is the main search key
                 search_term = f"?apikey={api_key}&i={imdbID}"
@@ -26,6 +28,8 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
                 print(url)
 
             elif title != "":  # the title is the main search key
+                if len(title) < MIN_LENGTH_TITLE:
+                    return ""
                 search_term = f"?apikey={api_key}&s={title}"
                 url = BASE_URL + search_term
                 print(url)
@@ -41,8 +45,14 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
             search_term = f"?apikey={api_key}"
             return search_term
 
-    imdb_url = specify_search_term(imdbID, title)
+    if not isinstance(imdbID, str):
+        return {}
+    if not isinstance(title, str):
+        return {}
 
+    imdb_url = specify_search_term(imdbID, title)
+    if imdb_url == "":
+        return {}
     try:
         response = requests.get(imdb_url, timeout=15)
         movie_details = response.json()
@@ -50,19 +60,22 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
         # Any type of connection failure is caught
     except Exception as e:
         logging.info(f"Could not access API: GET Request failed:\n{e}")
-        movie_details = {}
-        return movie_details
+        return {}
     if response.status_code != 200:  # the json contains an invalid response
         logging.info(f"Unable to search for movie in omdb db. Error: {response.content}")
-        movie_details = {}
+    logging.info("successfully fetched movie details")
     return movie_details
 
 def fetch_movie_general_data(title: str) -> list:
     """
-    get all the movies from the API that are alike the provided title
+    Get all the movies from the API that are alike the provided title
     :param title: the title to fetch
     :return: a list of movies
     """
+    if not isinstance(title, str):
+        return []
+    if len(title) < MIN_LENGTH_TITLE:
+        return []
     movie_data = fetch_movie_data("", title)
     if len(movie_data) > 0:
         return movie_data["Search"]

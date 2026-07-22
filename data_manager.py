@@ -17,12 +17,13 @@ logging.basicConfig(
 class DataManager:
     """
     Data manager class.
-    Data manager controls all the db services and the fetching of the
+    Data manager controls all the db services and the fetching of the required data
+    and storing them in the right format
 
-    Knows HOW to retrieve movies/user
-    Knows HOW to store movies/user
-    Knows HOW to update movies/user
-    Knows HOW to delete movies/user
+    Knows HOW to retrieve movies/user information
+    Knows HOW to store movies/user data
+    Knows HOW to update movies/user data
+    Knows HOW to delete movies/user data
     """
 
     def __init__(self):
@@ -49,7 +50,14 @@ class DataManager:
         return self.active_user
 
 
-    def set_active_user(self, user_id):
+    def set_active_user(self, user_id:int):
+        """
+        Activates the User related to the received user_id
+        :param user_id:
+        :return:
+        """
+        if not isinstance(user_id, int):
+            return None
         if self.user_exists(user_id):
             stmt= db.select(User).where(User.user_id == user_id)
             user = db.session.execute(stmt).scalars().all()
@@ -63,6 +71,16 @@ class DataManager:
 
 
     def user_exists(self, received_user)->bool:
+        """
+        Checks if the received user exists in the user table
+        :param received_user can be:
+        - a string to compare on user_name
+        - an int to compare on user_id
+        - a User object to compare the object
+
+        comparassion with the existing User objects in the DB
+        :return:
+        """
         all_users = self.get_all_users()
         if isinstance(received_user, int):
             for user in all_users:
@@ -90,6 +108,8 @@ class DataManager:
         :param user_name:
         :return:
         """
+        if not isinstance(user_name, str):
+            return None, "Received user name is not a string"
         new_user = User(user_name=user_name)
         stmt=db.select(User).where(User.user_name == user_name)
         existing_users = db.session.execute(stmt).scalars().all()
@@ -105,8 +125,10 @@ class DataManager:
 
     def delete_user(self, user_data:int|str)->tuple:
         """
-
-        :param user_id:
+        Deletes the provided user from the db
+        :param user_data which can be either a string or an integer.
+        if string: deletion based on user_name
+        if integer: deletion based on user_id
         :return:
         """
         if isinstance(user_data, int):
@@ -122,7 +144,6 @@ class DataManager:
         else:
             return None, f"Programming error, received {user_data} should be an integer or a string."
 
-
         user_to_delete = db.session.execute(stmt).scalars().all()
         if len(user_to_delete) != 1:
             return None, f"No user found with the provided user data: {user_data}"
@@ -133,6 +154,16 @@ class DataManager:
         return user_to_delete[0], f"User {user_to_delete[0]} deleted successfully!"
 
     def update_user(self, user_id:int, new_user_name:str)->User|None:
+        """
+        Update the user_name of the User object that has the provided user_id
+        :param user_id:
+        :param new_user_name:
+        :return:
+        """
+        if not isinstance(user_id, int):
+            return None
+        if not isinstance(new_user_name, str):
+            return None
         stmt=db.select(User).where(User.user_id == user_id)
         user_to_update = db.session.execute(stmt).scalars().all()
         if len(user_to_update) != 1:
@@ -145,19 +176,33 @@ class DataManager:
     # All class definitions related to movie management
     # =========================================================================
 
-    def fetch_matching_movies(self, movie_title:str="")->list[Movie]:
+    def fetch_matching_movies(self, movie_title)->list[Movie]:
+        """
+        Interface function for searching for movies with a specific title within the imdb web-site.
+        The search is actually performed by the movie_data_fetcher module.
+        :param movie_title:
+        :return:
+        """
+        if not isinstance(movie_title, str):
+            return []
+        if movie_title == "":
+            return []
         potential_movies=fetch_movie_general_data(movie_title)
         return potential_movies
 
-    def create_movie(self, imdbID:str)->Movie|None:
+    def create_movie(self, imdbID:str)->tuple:
         """
+        Creates a new movie object without the movie_id as this is established the moment the
+        movie is stored in the DB.
         Fetch relevant details for the received imdbID which will be used to create the movie.
-        if movie details are received, create a movie object and store it in the database.
+        if movie details are received, create a movie object and return it.
 
         :param imdbID:
         :return: If no movie details are received return None. Otherwise return the movie object
+        with a result string.
         """
-
+        if not isinstance(imdbID, str):
+            return None, "received imdbID is not a string"
         movie_details = fetch_movie_data(imdbID)
         if len(movie_details) != 0:
             new_movie = Movie(
@@ -171,14 +216,61 @@ class DataManager:
             return new_movie, f"Movie {new_movie.title} by {new_movie.director }created successfully!"
         return None, "Error: Movie details could not be fetched. Please try again later"
 
-    def movie_exists(self, imdbID:str)->bool:
-        stmt = db.select(Movie).where(Movie.IMDB_id == imdbID)
+    def movie_exists(self, id:int|str)->bool:
+        """
+        Checks if the received movie_id or imdbID exists in the database
+        :param id: as int -> movie_id
+                   as str -> imdb_id
+        :return: boolean -> True if movie exists, False otherwise
+        """
+        if isinstance(id, int):
+            stmt = db.select(Movie).where(Movie.movie_id == id)
+        elif isinstance(id, str):
+            stmt = db.select(Movie).where(Movie.IMDB_id == id)
+        else:
+            return False
         existing_movies = db.session.execute(stmt).scalars().all()
         if len(existing_movies) != 0:
             return True
         return False
 
-    def store_movie(self, movie):
+    def title_exists(self, title:str, active_user_id:int)->bool:
+        """
+        Checks if the received title exists in the database. Only used for manually added movies
+        :param title
+        :return: boolean -> True if movie with this title exists, False otherwise
+        """
+        if not isinstance(active_user_id, int) or active_user_id < 0:
+            return False
+        if not isinstance(title, str) or len(title) == 0:
+            return False
+        stmt = db.select(Movie).join(
+            movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
+            User, User.user_id == movie_user.c.user_id).where(
+            User.user_id == active_user_id,
+            Movie.title == title,
+        )
+        existing_movies = db.session.execute(stmt).scalars().all()
+        if len(existing_movies) != 0:
+            return True
+        return False
+
+    def store_movie(self, movie:Movie):
+        """
+        Store the received movie into the database. The storage consists of 3 steps
+        1. Verification of the input data
+        2. Add movie to the 'movies' table
+        3. Add an entry in the 'movies_users' table
+
+        To ensure data consistency, a flush is used for storing the movie in a staging area.
+        After the movie_id and the user_id are stored in the movies_users table, all insertions are
+        committed.
+        :param movie of type Movie
+        :return:
+        """
+        imdb_id = movie.IMDB_id
+        if not isinstance(imdb_id, str) or len(imdb_id) == 0:
+            return None, "received imdb_id is not a string"
         if self.movie_exists(movie.IMDB_id):
             return None, f"Movie {movie.title} already exists in the database"
         db.session.add(movie)
@@ -200,6 +292,23 @@ class DataManager:
 
 
     def store_manually_added_movie(self, movie:dict)->tuple:
+        """
+        Store the manually added movie into the database. the movie is provided as dictionary
+        4 steps:
+        1. Verification of the input data
+        2. Creation of a Movie object
+        3. Add movie to the 'movies' table
+        4. Add an entry in the 'movies_users' table
+
+        :param movie:
+        :return:
+        """
+        if len(movie.get('title',"")) == 0:
+            return None, "Movie can not be stored: Movie title can not be empty"
+        if self.title_exists(movie.get('title',""), self.active_user.user_id):
+            return None, "Movie can not be stored: Movie title already exists"
+        if self.active_user is None:
+            return None, "Movie can not be stored due to error: active user is not set"
         if self.get_active_user():
             new_movie = Movie(
                 title=movie.get('title',""),
@@ -221,10 +330,10 @@ class DataManager:
                 logging.info(f"Connection successfully stored in the movie_user table3: {new_movie.title} - {new_movie.director}")
                 db.session.commit()
             except IntegrityError as e:
-                logging.info(f"An error occurred while storing the movie: {e}")
-                return new_movie, "An error occurred while storing the movie"
+                logging.info(f"Movie can not be stored due to error: {e}")
+                return new_movie, f"Movie can not be stored due to error: {e}"
             print("added movie:", new_movie)
-        return None, "An error occurred while storing the movie"
+        return None, "Movie can not be stored due to error: active user is not set"
 
 
     def get_all_movies_of_active_user(self, sorting_command:dict)->list[Movie|None]:
@@ -233,8 +342,10 @@ class DataManager:
         :return:
         """
         active_user_id = self.get_active_user().user_id
-        if sorting_command['sort_by'] == 'movies':
-            if sorting_command['direction'] == 'asc':
+        sort_by = sorting_command.get('sort_by','movies')
+        direction = sorting_command.get('direction', 'asc')
+        if sort_by == 'movies':
+            if direction == 'asc':
                 stmt = db.select(Movie).join(
                     movie_user, Movie.movie_id == movie_user.c.movie_id,).join(
                     User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.title.asc())
@@ -243,7 +354,7 @@ class DataManager:
                     movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
                     User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.title.desc())
         else:
-            if sorting_command['direction'] == 'asc':
+            if direction == 'asc':
                 stmt = db.select(Movie).join(
                     movie_user, Movie.movie_id == movie_user.c.movie_id,).join(
                     User, User.user_id == movie_user.c.user_id).where(User.user_id == active_user_id).order_by(Movie.director.asc())
@@ -257,26 +368,34 @@ class DataManager:
 
     def get_movie(self, movie_id:int)->Movie|None:
         """
-
+        returns a movie object with the provided movie_id or none if the movie_id is not found.
         :param movie_id:
         :return:
         """
-        stmt = db.select(Movie).where(Movie.movie_id == movie_id)
+        if isinstance(movie_id, int):
+            if self.movie_exists(movie_id):
+                stmt = db.select(Movie).where(Movie.movie_id == movie_id)
+            else:
+                return None
+        else:
+            return None
         movie = db.session.execute(stmt).scalars().one()
         return movie
 
     def search_for_titles_and_directors(self, query: str, sorting_command:dict) -> list[Movie|None]:
         """
-        Enables the search in the database using "%like%" SQL search, case-insensitive. The outcome is sored based
+        Enables the search in the database using "%like%" SQL search, case-insensitive. The outcome is sorted based
         upon user demands
         :param query: the searchstring
         :param sorting_command: user demands for sorting the output
-        :return:
+        :return: a list of Movie objects that matches the query and sorting command
         """
         found_movies = []
         query = "%" + query.strip().lower() + "%"
-        if sorting_command["sort_by"] == "title":
-            if sorting_command["direction"] == "asc":
+        sort_by = sorting_command.get('sort_by','movies')
+        direction = sorting_command.get('direction', 'asc')
+        if sort_by == "title":
+            if direction == "asc":
                 stmt = db.select(Movie).join(
                     movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
                         User, User.user_id == movie_user.c.user_id).where(
@@ -295,7 +414,7 @@ class DataManager:
                             )
                         ).order_by(Movie.title.desc())
         else:
-            if sorting_command["direction"] == "asc":
+            if direction == "asc":
                 stmt = db.select(Movie).join(
                     movie_user, Movie.movie_id == movie_user.c.movie_id, ).join(
                         User, User.user_id == movie_user.c.user_id).where(
@@ -314,6 +433,4 @@ class DataManager:
                     )
                 ).order_by(Movie.director.desc())
         search_result = db.session.execute(stmt).scalars().all()
-
-        # print(search_result, type(search_result))
         return search_result

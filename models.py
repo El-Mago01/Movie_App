@@ -20,7 +20,7 @@ class User(db.Model):
 
 class Movie(db.Model):
     """
-    Movie model, with name and user_id, using the Flask-ORM for database management
+    Movie model, with name and movie_id, using the Flask-ORM for database management
 
     """
     # Define all the Movie properties
@@ -40,6 +40,13 @@ class Movie(db.Model):
     def __str__(self):
         return f"{self.movie_id}: {self.title},\n {self.director},\n {self.IMDB_id},\n {self.year},\n {self.poster_url}"
 
+"""
+The intermediate table between users and movies to enable a many to many relation. 
+Only stores the movies_ids and user_ids to show what movies are connected to what user_ids. 
+So it can be derived what movies are related to a specific user. But also, what users are 
+related to specific movies.
+
+"""
 movie_user= db.Table("movie_user",
                      db.Column('movie_id', db.Integer, db.ForeignKey('movies.movie_id'), primary_key=True),
                      db.Column('user_id', db.Integer, db.ForeignKey('users.user_id'), primary_key=True)

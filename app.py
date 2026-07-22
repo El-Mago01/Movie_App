@@ -37,7 +37,9 @@ def analyze_user_input(user_id:str)->int:
     :return: a verified received_user_id
     """
     print("Received user id:", user_id)
-    if user_id == "" or user_id == "Open this menu with available users":
+    if not isinstance(user_id, str):
+        return -1
+    if user_id == "" or not user_id.isnumeric() :
         return -1
     else:
         try:
@@ -46,6 +48,7 @@ def analyze_user_input(user_id:str)->int:
                 return received_user_id
         except ValueError as e:
             return -1
+    return -1
 """
 ======================================================================================
 ENDPOINTS
@@ -144,21 +147,11 @@ def add_user():
     new_user, result = dm.add_user(new_user_name)
     if result == -1:
         logging.info(f"New user {new_user.user_name} already exists in database")
-        # outcome = {"result": 404, "message": f"Not able to store. New user {new_user.user_name} already exists in the database"}
         flash(f"Not able to store new user: New user {new_user.user_name} already exists in the database", "warning")
-        # db.session["current_function"] = "Display user's movies and menu"
         return redirect(url_for("user_admin"))
-        # return render_template("user_admin.html",
-        #                        current_function=,
-        #                        outcome=outcome)
 
-    all_users = dm.get_all_users()
-
-    active_user=dm.get_active_user()
     logging.info(f"New user {new_user.user_name} stored in the database")
-    outcome = {"result": 200, "message": f"New user {new_user.user_name} stored in the database"}
     flash(f"New user {new_user.user_name} stored in the database", "info")
-    # db.session["current_function"] = "Display user's movies and menu"
     return redirect(url_for("index"))
 
 @app.route('/list_users', methods=['GET'])
@@ -221,20 +214,14 @@ def user_action():
     received_user_id = request.form.get('user_id',"")
     received_action = request.form.get('action',"")
     received_user_id = analyze_user_input(received_user_id)
-    # all_users = dm.get_all_users()
+    if received_user_id == -1:
+        abort(404, description="Received user_id not correct")
     if received_action == "select":
         active_user = dm.set_active_user(received_user_id)
         if active_user is not None:
-            # outcome = {"result": 200, "message": f"User {active_user.user_name} is now active"}
             flash(f"User {active_user.user_name} is now active", "info")
             return redirect(url_for("index"))
-            # return render_template("index.html",
-            #                        app_name=app_name,
-            #                        all_users=all_users,
-            #                        active_user=active_user,
-            #                        current_function="Display user's movies and menu",
-            #                        outcome=outcome
-            #                        )
+
         abort(500, description=f"Unable to activate the provided user id {received_user_id}")
     elif received_action == "delete":
         result = dm.delete_user(received_user_id)
@@ -306,15 +293,14 @@ def delete_user():
 @app.route('/update_user', methods=['POST'])
 def update_user():
     """
-    Upon reception of this request the user will receive a link towards the user_admin.thml
-    including all the existing users in the DB and the active_user
+    The user clicked on the menu option to update the active user. Upon reception, the active user
     """
-    user_id_to_update = dm.get_active_user()
-    if user_id_to_update is None:
+    user_to_update = dm.get_active_user()
+    if user_to_update is None:
         logging.info("Active user is not set. Please ensure active user is set!")
         abort(404, description="Active user is not set. Please ensure active user is set!")
 
-    user_id_to_update = user_id_to_update.user_id
+    user_id_to_update = user_to_update.user_id
     new_user_name = request.form.get('new_user_name',"").strip()
     if new_user_name == "":
         abort(404, description="Received new_user_name is an empty string. Please provide a new user name")
@@ -331,8 +317,6 @@ def update_user():
     abort(500, description=f"Unable to update the name of provided user id {user_id_to_update}")
 
 
-
-
 """
 ------------------------------------------------------------------------------------------
 All endpoints definitions related to movie management
@@ -340,13 +324,26 @@ All endpoints definitions related to movie management
 """
 @app.route('/add_movie', methods=['POST'])
 def add_movie():
+    """
+    The user clicked on the option to add a new movie to the DB using the IMDB database. In this case:
+    1. The received title is analyzed on correctness
+    2. A request is sent to the datamanager to fetch all movies in the IMDB database with the provided title
+    3. The user receives all the movies in a nice listing so that he/she can select the movies she/he wants
+    to add
+
+    :return:
+    """
     requested_title = request.form.get('movie_title', "")
+
+    if not isinstance(requested_title, str):
+        abort(404, description=f"Received title '{requested_title}' not correct")
     if requested_title == "":
         abort(404, description=f"Received title '{requested_title}' not correct")
+
     found_movies=dm.fetch_matching_movies(requested_title)
     if len(found_movies) == 0:
         abort(400, description=f"No movies found for title '{requested_title}'")
-    outcome = {'result': 200, 'message':"Found movies with the provided title. Please select the ones you want to add"}
+    outcome = {'result': 200, 'message':"Found 1 or more movies with the provided title. Please select the ones you want to add"}
     return render_template("select_movie.html",
                            app_name=app_name,
                            current_function="Select movie to be added to the DB",
@@ -356,6 +353,11 @@ def add_movie():
 
 @app.route('/store_selected_movies', methods=['POST'])
 def store_selected_movies():
+    """
+    The user selected the movies he/she wants to store in the DB. Upon reception, the applicable movies
+    are connected with the active user_id and stored as such in the 2 tables 'movies and movies_users'
+    :return:
+    """
     selected_movies = request.form.getlist('selected_movies')
     if dm.get_active_user() is None:
         abort(404, description="Active user is not set")
@@ -376,15 +378,23 @@ def store_selected_movies():
 def manually_add_movie():
     """
     Enables the manually adding of a new movie, e.g. when the movie is not stored in the imdb Data base.
-
+    Here various field like title, director, year, poster_url etc are manually fulfilled and forwarded to this route..
     :return:
     """
+
+    #------------------------------------------------
+    #   GET MESSAGE - SEND THE FORM TO FULFILL
+    #------------------------------------------------
     if request.method == 'GET':
         return render_template(
             "manually_add_movie.html",
 
             current_function="Manually add a new movie"
         )
+
+    #------------------------------------------------
+    #   POST MESSAGE - AFTER FILLING THE FORM
+    #------------------------------------------------
     updated_title=request.form.get("movie_title", "")
     updated_year=request.form.get("year", "-1")
     updated_director=request.form.get("director", "")
@@ -397,7 +407,10 @@ def manually_add_movie():
         'IMDB_id' : updated_imdbID,
         'poster_url' : updated_poster_url,
     }
-    dm.store_manually_added_movie(new_movie_dict)
+    result = dm.store_manually_added_movie(new_movie_dict)
+    if result[0] is None:
+        logging.warning(f"Movie not added: {result[1]}")
+        abort(404, description=f"Movie not added: {result[1]}")
     return redirect(url_for("index"), 302)
 
 @app.route('/delete_movie', methods=['GET'])
