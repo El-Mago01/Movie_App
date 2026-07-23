@@ -132,7 +132,7 @@
                         </div>
                     </div>
                 {% endfor %}
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
                 <button type="submit"  form="selectMovieForm" class="btn btn-primary">Add selected movies</button>
             </div>
         </form>
