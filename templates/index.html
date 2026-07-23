@@ -181,7 +181,7 @@
             {% for movie in all_movies %}
                 <div class="col-lg-3">
                     <div class="card-group" style="margin-top:5px; padding-top: 5px;">
-                        <div class="card p-5 border bg-light" style="height: 600px;">
+                        <div class="card p-5 border bg-light" style="height: 650px;">
                             {% if movie.poster_url|length == 0 %}
                                 <img src="{{ url_for('static', filename='images/default_poster.png') }}" class="card-img-top" alt="Logo">
                             {% else %}

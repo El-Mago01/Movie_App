@@ -109,7 +109,7 @@ def index():
         )
     if active_user is not None:
         # active user is set. Show the user's movies
-        all_movies = dm.get_all_movies_of_active_user(sorting_command)
+        all_movies = dm.get_all_movies_of_user(active_user.user_id, sorting_command)
         if len(all_movies) == 0:
             logging.info(
                 "index page requested, but there are no movies in the user database yet.")
@@ -489,6 +489,7 @@ def delete_movie():
     :return:
     """
     received_movie_id = request.args.get("movie_id", "")
+    logging.info(f"Received request to delete movie with ID {received_movie_id}")
     try:
         movie_id = int(received_movie_id)
     except ValueError as e:
@@ -497,9 +498,12 @@ def delete_movie():
     if movie_id == -1:
         abort(404, description="Incorrect movie_id received")
 
-    movie_to_delete = dm.get_movie(movie_id)
-    db.session.delete(movie_to_delete)
-    db.session.commit()
+    deleted_movie = dm.delete_movie(movie_id=movie_id, del_associations=True)
+
+    if deleted_movie is None:
+        abort(500,
+              description="Movie not deleted due to internal problem during delete procedure")
+    logging.info(f"Deletion of movie with ID {movie_id} successful")
     return redirect(url_for("index"), 302)
 
 
@@ -517,6 +521,8 @@ def update_movie():
     except ValueError:
         abort(400, description="Received movie id is not an integer")
     if received_movie_id != -1:
+        if dm.get_active_user() is None:
+            abort(404, description="No active user set. Please set active user")
         movie_to_update = dm.get_movie(received_movie_id)
         return render_template(
             "update_movie.html",
@@ -545,7 +551,8 @@ def updated_movie():
     updated_director = request.form.get("director", "")
     updated_imdbID = request.form.get("IMDB_id", "")
     updated_poster_url = request.form.get("poster_url", "")
-
+    if dm.get_active_user() is None:
+        abort(404, description="No active user set. Please set active user")
     movie_to_update = dm.get_movie(movie_id)
     if len(updated_title) != 0:
         movie_to_update.title = updated_title
@@ -567,7 +574,7 @@ def updated_movie():
 def search_movie():
     """
     Searches the DB within both the movie titles and the director name for a match with the received
-    query. The query is made case insensitive. and uses the SQL "%like%" form.
+    query. The query is made lower-case. and uses the SQL "%like%" form.
     :return:
     """
     search_query = request.args.get("query", "")

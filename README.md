@@ -8,4 +8,6 @@ TechStack from Movie App assignment:
 - OOP - Object oriented Programming
 - ORM Statements with joins
 - ORM Tables enabling many to many (many-to-many) data connections using a middle table
+- flushing for SQL staging area to enable correct storage of data
+- flash for forwarding a message with a redirect. Similar to session
 - Composite primary key

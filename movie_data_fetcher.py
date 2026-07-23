@@ -39,7 +39,9 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
             elif title != "":  # the title is the main search key
                 if len(title) < MIN_LENGTH_TITLE:
                     return ""
-                search_term = f"?apikey={api_key}&s={title}"
+                title_words = title.strip().split(" ")
+                title_search_term = "+".join(title_words)
+                search_term = f"?apikey={api_key}&s={title_search_term}"
                 url = BASE_URL + search_term
                 print(url)
             else:
