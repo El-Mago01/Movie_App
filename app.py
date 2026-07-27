@@ -481,14 +481,14 @@ def manually_add_movie():
     return redirect(url_for("index"), 302)
 
 
-@app.route("/delete_movie", methods=["GET"])
+@app.route("/delete_movie", methods=["POST"])
 def delete_movie():
     """
     Delete a movie from the DB based upon input parameter "movie_id"
     :param movie_id, identifying the movie to be deleted
     :return:
     """
-    received_movie_id = request.args.get("movie_id", "")
+    received_movie_id = request.form.get("movie_id", "")
     logging.info(f"Received request to delete movie with ID {received_movie_id}")
     try:
         movie_id = int(received_movie_id)
