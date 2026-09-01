@@ -10,15 +10,9 @@
 
 {% block update_movie %}
 {% if movie_to_update is defined and movie_to_update is not none %}
-    <form action="/updated_movie" method="post">
+    <form action="{{ url_for('update_user_movie', user_id=active_user.user_id, movie_id=movie_to_update.movie_id) }}" method="post">
 
-        <input
-            type="hidden"
-            name="movie_id"
-            value="{{ movie_to_update.movie_id }}"
-        >
-
-        <div class="col-sm-6 p-5 border bg-light">
+        <div class="col-sm-6 p-5 border bg-light text-start">
             <label for="movieTitle" class="form-label">Movie title</label>
             <input type="text" class="form-control" id="movieTitle" name="movie_title" placeholder="{{ movie_to_update.title }}">
 
@@ -32,14 +26,15 @@
             <input type="text" class="form-control" id="Year" name="year" placeholder="{{ movie_to_update.year }}">
 
             <label for="coverImage" class="form-label">Cover-image source</label>
-            <input type="text" class="form-control" id="coverImage" name="cover_image" placeholder="{{ movie_to_update.poster_url }}">
+            <input type="text" class="form-control" id="coverImage" name="poster_url" placeholder="{{ movie_to_update.poster_url }}">
 
         </div>
 
         <div class="col-sm-6 p-5 border bg-light">
-            <button type="submit" value="Update-Movie">
+            <button type="submit" class="btn btn-primary" value="Update-Movie">
                 Update Movie
             </button>
+            <a href="{{ url_for('user_movies', user_id=active_user.user_id) }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 {% else %}

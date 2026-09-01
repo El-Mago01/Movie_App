@@ -11,8 +11,20 @@ import logging
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError, OperationalError
 
-from models import db, Movie, User, movie_user
+import re
+from models import db, Movie, User
 from movie_data_fetcher import fetch_movie_general_data, fetch_movie_data
+
+
+def normalize_year(year_val) -> int | None:
+    if year_val is None:
+        return None
+    if isinstance(year_val, int):
+        return year_val
+    match = re.search(r"\d{4}", str(year_val))
+    if match:
+        return int(match.group())
+    return None
 
 logging.basicConfig(
     filename="app.log",
@@ -130,28 +142,15 @@ class DataManager:
 
     def delete_user(self, user_data: int | str) -> tuple:
         """
-        Deletes the provided user from the db
-        Nice, but how to deal with the movies where there is no user? I decided for the following business logic:
-
-        A movie associated with this user will be removed from the movies_users table AND also from the movie table
-
-        :param user_data which can be either a string or an integer.
-        if string: deletion based on user_name. Here actually the active user is asked to be deleted. user_name
-                   is used for validation.
-        if integer: deletion based on user_id
-        :return: A tuple with the deleted movie or None, with a result message
+        Deletes the provided user from the db. Associated movies will be automatically
+        deleted due to cascade mapping on User.movies relationship.
         """
         if isinstance(user_data, int):
-            user_id_to_delete=user_data
+            user_id_to_delete = user_data
         elif isinstance(user_data, str):
-            # ------------------------------------------------------------
-            # The case that user_data indicates a user_name:
-            # this is the situation that the active user should be deleted
-            # the user_name reception is to validate the user
-            # ------------------------------------------------------------
-            active_user=self.get_active_user()
+            active_user = self.get_active_user()
             if active_user is not None:
-                if active_user.user_name != user_data:
+                if active_user.user_name == user_data:
                     user_id_to_delete = active_user.user_id
                 else:
                     return None, "Active user name and received name do not match"
@@ -166,44 +165,24 @@ class DataManager:
                 f"Programming error, received {user_data} should be an integer or a string."
             )
 
-        # Follow the 4 steps for deleting the movies related to the user + the user him/herself
         try:
-            # 1. store which movies might be affected
-            stmt = db.select(movie_user.c.movie_id).where(
-                movie_user.c.user_id == user_id_to_delete
-            )
-            movies_ids_from_user = db.session.execute(stmt).scalars().all()
-
-            # 2. Delete all relationships with this user in movie_user
-            db.session.execute(
-                movie_user.delete().where(
-                    movie_user.c.user_id == user_id_to_delete
-                )
-            )
-
-            # 3. Delete the movies that are associated with this user_id. Do not yet commit
-            for movie_id in movies_ids_from_user:
-                deleted_movie=self.delete_movie(movie_id=movie_id, commit=False, del_associations=False)
-                if deleted_movie:
-                    logging.info(f"Movie with movie_id {movie_id} deleted successfully")
-
-            # 4. Delete the user
-            stmt = db.select(User).where(User.user_id == user_data)
-            user_to_delete = db.session.execute(stmt).scalars().one()
+            stmt = db.select(User).where(User.user_id == user_id_to_delete)
+            user_to_delete = db.session.execute(stmt).scalars().one_or_none()
             if user_to_delete is None:
-                return None, f"No user found with the provided user data: {user_data}"
+                return None, f"No user found with the provided user ID: {user_id_to_delete}"
+            
             db.session.delete(user_to_delete)
-
             db.session.commit()
-            if self.get_active_user() is not None:
-                if self.get_active_user().user_id == user_to_delete.user_id:
+            
+            if self.active_user is not None:
+                if self.active_user.user_id == user_to_delete.user_id:
                     self.unset_active_user()
-            return user_to_delete, f"User {user_to_delete} deleted successfully!"
+            return user_to_delete, f"User {user_to_delete.user_name} deleted successfully!"
 
-        except Exception:
+        except Exception as e:
             db.session.rollback()
-            logging.info("Error while deleting user and associated movies. Rollback executed")
-            return None,"Error while deleting user and associated movies. Rollback executed"
+            logging.error(f"Error while deleting user: {e}")
+            return None, "Error while deleting user and associated movies. Rollback executed"
 
 
     def update_user(self, user_id: int, new_user_name: str) -> User | None:
@@ -270,14 +249,14 @@ class DataManager:
                 title=movie_details.get("Title", ""),
                 director=movie_details.get("Director", ""),
                 IMDB_id=imdbID,
-                year=movie_details.get("Year", ""),
+                year=normalize_year(movie_details.get("Year", "")),
                 poster_url=movie_details.get("Poster", ""),
                 user_id=user_id
             )
             return (
                 new_movie, f"Movie {
                     new_movie.title} by {
-                    new_movie.director}created successfully!", )
+                    new_movie.director} created successfully!", )
         return None, "Error: Movie details could not be fetched. Please try again later"
 
     def movie_exists(self, a_movie_id:int|str) -> bool:
@@ -295,10 +274,9 @@ class DataManager:
         if isinstance(a_movie_id, int):
             stmt = db.select(Movie).where(Movie.movie_id == a_movie_id)
         elif isinstance(a_movie_id, str):
-            stmt = db.select(Movie).join(
-                movie_user, Movie.movie_id == movie_user.c.movie_id).where(
+            stmt = db.select(Movie).where(
                 Movie.IMDB_id == a_movie_id,
-                movie_user.c.user_id == act_usr.user_id
+                Movie.user_id == act_usr.user_id
             )
         else:
             return False
@@ -322,13 +300,8 @@ class DataManager:
             return False
         stmt = (
             db.select(Movie)
-            .join(
-                movie_user,
-                Movie.movie_id == movie_user.c.movie_id,
-            )
-            .join(User, User.user_id == movie_user.c.user_id)
             .where(
-                User.user_id == active_user_id,
+                Movie.user_id == active_user_id,
                 Movie.title == title,
             )
         )
@@ -339,14 +312,7 @@ class DataManager:
 
     def store_movie(self, movie: Movie):
         """
-        Store the received movie into the database. The storage consists of 3 steps
-        1. Verification of the input data
-        2. Add movie to the 'movies' table
-        3. Add an entry in the 'movies_users' table
-
-        To ensure data consistency, a flush is used for storing the movie in a staging area.
-        After the movie_id and the user_id are stored in the movies_users table, all insertions are
-        committed.
+        Store the received movie into the database.
         :param movie of type Movie
         :return:
         """
@@ -356,20 +322,6 @@ class DataManager:
         if self.movie_exists(movie.IMDB_id):
             return None, f"Movie {movie.title} already exists in the database"
         db.session.add(movie)
-
-        # db.session.flush sends the INSERT to the database so movie.movie_id is generated,
-        # but the transaction is not permanently committed yet. Commitment follows at
-        # db.session.commit
-        db.session.flush()
-        logging.info(
-            "Connecting movie %d to user %d.", movie.movie_id, self.active_user.user_id)
-        insert_link = movie_user.insert().values(
-            movie_id=movie.movie_id, user_id=self.active_user.user_id
-        )
-        db.session.execute(insert_link)
-        logging.info(
-            "Connection successfully stored in the movie_user table: %s - %s.",
-            movie.title, movie.director)
         db.session.commit()
         print("added movie:", movie)
         return (
@@ -378,13 +330,7 @@ class DataManager:
 
     def store_manually_added_movie(self, movie: dict) -> tuple:
         """
-        Store the manually added movie into the database. the movie is provided as dictionary
-        4 steps:
-        1. Verification of the input data
-        2. Creation of a Movie object
-        3. Add movie to the 'movies' table
-        4. Add an entry in the 'movies_users' table
-
+        Store the manually added movie into the database.
         :param movie:
         :return:
         """
@@ -399,21 +345,12 @@ class DataManager:
             title=movie.get("title", ""),
             director=movie.get("director", ""),
             IMDB_id=movie.get("IMDB_id", ""),
-            year=movie.get("year", ""),
+            year=normalize_year(movie.get("year", "")),
             poster_url=movie.get("poster_url", ""),
             user_id=user.user_id,
         )
         try:
             db.session.add(new_movie)
-            db.session.flush()
-            logging.info(
-                "Connecting movie %d to user %d.", new_movie.movie_id, self.active_user.user_id)
-            insert_link = movie_user.insert().values(
-                movie_id=new_movie.movie_id, user_id=self.active_user.user_id)
-            db.session.execute(insert_link)
-            logging.info(
-                "Connection successfully stored in the movie_user table: %s - %s.",
-                new_movie.title, new_movie.director)
             db.session.commit()
         except IntegrityError as e:
             logging.info("Movie can not be stored due to error: %s", e)
@@ -434,52 +371,19 @@ class DataManager:
             return []
         sort_by = sorting_command.get("sort_by", "movies")
         direction = sorting_command.get("direction", "asc")
+        
+        stmt = db.select(Movie).where(Movie.user_id == user_id)
         if sort_by == "movies":
             if direction == "asc":
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(User.user_id == user_id)
-                    .order_by(Movie.title.asc())
-                )
+                stmt = stmt.order_by(Movie.title.asc())
             else:
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(User.user_id == user_id)
-                    .order_by(Movie.title.desc())
-                )
+                stmt = stmt.order_by(Movie.title.desc())
         else:
             if direction == "asc":
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(User.user_id == user_id)
-                    .order_by(Movie.director.asc())
-                )
+                stmt = stmt.order_by(Movie.director.asc())
             else:
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(User.user_id == user_id)
-                    .order_by(Movie.director.desc())
-                )
+                stmt = stmt.order_by(Movie.director.desc())
+                
         movies = db.session.execute(stmt).scalars().all()
         return list(movies)
 
@@ -510,79 +414,34 @@ class DataManager:
         :param sorting_command: user demands for sorting the output
         :return: a list of Movie objects that matches the query and sorting command
         """
+        act_usr = self.get_active_user()
+        user_id = act_usr.user_id if act_usr else -1
         query = "%" + query.strip().lower() + "%"
         sort_by = sorting_command.get("sort_by", "movies")
         direction = sorting_command.get("direction", "asc")
+        
+        stmt = db.select(Movie).where(
+            Movie.user_id == user_id,
+            or_(
+                func.lower(Movie.title).like(query),
+                func.lower(Movie.director).like(query)
+            )
+        )
         if sort_by == "title":
             if direction == "asc":
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(
-                        or_(
-                            func.lower(Movie.title.like(query)),
-                            func.lower(Movie.director.like(query)),
-                        )
-                    )
-                    .order_by(Movie.title.asc())
-                )
+                stmt = stmt.order_by(Movie.title.asc())
             else:
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(
-                        or_(
-                            func.lower(Movie.title.like(query)),
-                            func.lower(Movie.director.like(query)),
-                        )
-                    )
-                    .order_by(Movie.title.desc())
-                )
+                stmt = stmt.order_by(Movie.title.desc())
         else:
             if direction == "asc":
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(
-                        or_(
-                            func.lower(Movie.title.like(query)),
-                            func.lower(Movie.director.like(query)),
-                        )
-                    )
-                    .order_by(Movie.director.asc())
-                )
+                stmt = stmt.order_by(Movie.director.asc())
             else:
-                stmt = (
-                    db.select(Movie)
-                    .join(
-                        movie_user,
-                        Movie.movie_id == movie_user.c.movie_id,
-                    )
-                    .join(User, User.user_id == movie_user.c.user_id)
-                    .where(
-                        or_(
-                            func.lower(Movie.title.like(query)),
-                            func.lower(Movie.director.like(query)),
-                        )
-                    )
-                    .order_by(Movie.director.desc())
-                )
+                stmt = stmt.order_by(Movie.director.desc())
+                
         search_result = db.session.execute(stmt).scalars().all()
         return list(search_result)
 
-    def delete_movie(self, movie_id:int, commit:bool=True, del_associations:bool=False) -> Movie | None:
+    def delete_movie(self, movie_id:int, commit:bool=True) -> Movie | None:
         """
         Deletes the movie from the movies table
 
@@ -592,34 +451,20 @@ class DataManager:
 
         :return: The Movie object fitting the movie_id or None if the movie does not exist in the DB
         """
-
-
         if not isinstance(movie_id, int):
             return None
-        if not self.movie_exists(movie_id):
+        stmt = db.select(Movie).where(Movie.movie_id == movie_id)
+        movie_to_delete = db.session.execute(stmt).scalars().one_or_none()
+        if movie_to_delete is None:
             return None
-        movie_to_delete = self.get_movie(movie_id)
         try:
             db.session.delete(movie_to_delete)
-
-            if del_associations:
-                act_usr = self.get_active_user()
-                if act_usr is None:
-                    return None
-                # 2. Delete all relationships with this user in movie_user
-                db.session.execute(
-                    movie_user.delete().where(
-                        movie_user.c.movie_id == movie_id,
-                        movie_user.c.user_id == act_usr.user_id
-                    )
-                )
-
             if commit:
                 db.session.commit()
         except OperationalError:
             logging.error(
                 f"Fatal error while deleting movie {movie_id} from database")
+            db.session.rollback()
             return None
-
 
         return movie_to_delete

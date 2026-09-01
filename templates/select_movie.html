@@ -94,8 +94,8 @@
 <!--This is the end of the search field-->
 <!--This is the html/jinja2 for the creation of the movie-cards-->
 {% if found_movies|length != 0 %}
-    <div class="container">
-        <form action="{{ url_for('store_selected_movies') }}"
+    <div class="container text-start">
+        <form action="{{ url_for('add_user_movie', user_id=active_user.user_id) }}"
                 method="POST"
                 id="selectMovieForm">
             <div class="row">
@@ -132,7 +132,7 @@
                         </div>
                     </div>
                 {% endfor %}
-                <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                <a href="{{ url_for('user_movies', user_id=active_user.user_id) }}" class="btn btn-secondary">Cancel</a>
                 <button type="submit"  form="selectMovieForm" class="btn btn-primary">Add selected movies</button>
             </div>
         </form>

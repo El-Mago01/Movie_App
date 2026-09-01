@@ -26,28 +26,27 @@
                         Users
                         </a>
                             <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/user_admin">add user</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/user_admin">User admin</a></li>
-                            <li><a class="dropdown-item" href="/list_users">List users</a></li>
+                            <li><a class="dropdown-item" href="/">User admin / List users</a></li>
+                            {% if active_user is not none %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#updateUserModal">Update active user</a></li>
                             <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#deleteUserModal">Delete active user</a></li>
-
+                            {% endif %}
                         </ul>
                     </li>
+                   {% if active_user is not none %}
                    <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Movies
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addMovieModal">Search & add</a></li>
-                            <li><a class="dropdown-item" href="/manually_add_movie">Manually add</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('manually_add_movie_form', user_id=active_user.user_id) }}">Manually add</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('index') }}">List all</a></li>
-
+                            <li><a class="dropdown-item" href="{{ url_for('user_movies', user_id=active_user.user_id) }}">List all</a></li>
                         </ul>
                    </li>
+                   {% endif %}
                 </ul>
             </div>
         </div>
@@ -252,16 +251,16 @@
         // ============================================================================
         //                    Movie management javascript functions
         // ============================================================================
+        const activeUserId = "{{ active_user.user_id if active_user else '' }}";
 
         // ----------------------------------------------------------------------------
         //                    submitAddMovie.
         // Ensures the fetching of the movieTitle from the modal and sends it to route
-        // '/add_movie'
+        // 'POST /users/<int:user_id>/movies'
         // ----------------------------------------------------------------------------
         async function submitAddMovie() {
-            console.log("Hello World")
             const movieTitle = document.getElementById("movieTitle").value.trim();
-            console.log("Hello submitAddMovie is triggered with movie title:", movieTitle);
+            console.log("submitAddMovie is triggered with movie title:", movieTitle);
             const body = new URLSearchParams();
 
             if (!movieTitle) {
@@ -269,8 +268,7 @@
                 return;
             }
             body.append("movie_title", movieTitle);
-            console.log("submitAddMovie is triggered with movie_title:", movieTitle);
-            const response = await fetch("/add_movie", {
+            const response = await fetch(`/users/${activeUserId}/movies`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded"
@@ -279,14 +277,10 @@
             });
 
             if (response.ok) {
-                console.log("user_name_to_delete deleted successfully.");
                 document.documentElement.innerHTML = await response.text()
-                // window.location.reload();
             } else {
                 document.documentElement.innerHTML = await response.text();
             }
-            // window.location.href =
-            //     `/update_movie?movie_id=${encodeURIComponent(movieId)}`;
         }
 
         // ----------------------------------------------------------------------------

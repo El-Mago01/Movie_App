@@ -91,6 +91,6 @@ def fetch_movie_general_data(title: str) -> list:
     if len(title) < MIN_LENGTH_TITLE:
         return []
     movie_data = fetch_movie_data("", title)
-    if len(movie_data) > 0:
+    if movie_data.get("Response") == "True" and "Search" in movie_data:
         return movie_data["Search"]
     return []  # in case movie_data is empty

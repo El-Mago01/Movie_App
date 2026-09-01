@@ -28,6 +28,7 @@ class User(db.Model):
         db.Integer, primary_key=True, nullable=False, autoincrement=True
     )
     user_name = db.Column(db.String(100), nullable=False)
+    movies = db.relationship("Movie", backref="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"{self.user_id}: {self.user_name},\n"
@@ -53,7 +54,7 @@ class Movie(db.Model):
     title = db.Column(db.String(100), nullable=False)
     director = db.Column(db.String(100), nullable=False)
     IMDB_id = db.Column(db.String, nullable=False)
-    year = db.Column(db.String)
+    year = db.Column(db.Integer)
     poster_url = db.Column(db.String(100))
     user_id = db.Column(
         db.Integer,
@@ -78,24 +79,3 @@ class Movie(db.Model):
                     self.year},\n {
                         self.poster_url}"
 
-
-# ================================================================================
-# The intermediate table between users and movies to enable a many to many relation.
-# Only stores the movies_ids and user_ids to show what movies are connected to what user_ids.
-# So it can be derived what movies are related to a specific user. But also, what users are
-# related to specific movies.
-# ================================================================================
-
-movie_user = db.Table(
-    "movie_user",
-    db.Column(
-        "movie_id",
-        db.Integer,
-        db.ForeignKey("movies.movie_id"),
-        primary_key=True),
-    db.Column(
-        "user_id",
-        db.Integer,
-        db.ForeignKey("users.user_id"),
-        primary_key=True),
-)

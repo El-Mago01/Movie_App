@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block update_movie %}
-    <form action="/manually_add_movie" method="post">
+    <form action="{{ url_for('add_user_movie', user_id=active_user.user_id) }}" method="post">
         
-            <div class="col-sm-6 p-5 border bg-light">
+            <div class="col-sm-6 p-5 border bg-light text-start">
             <label for="movieTitle" class="form-label">Movie title</label>
             <input type="text" class="form-control" id="movieTitle" name="movie_title" placeholder="The name of the movie">
 
@@ -30,9 +30,10 @@
         </div>
 
         <div class="col-sm-6 p-5 border bg-light">
-            <button type="submit" value="Add-Movie">
+            <button type="submit" class="btn btn-primary" value="Add-Movie">
                 Add Movie
             </button>
+            <a href="{{ url_for('user_movies', user_id=active_user.user_id) }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 

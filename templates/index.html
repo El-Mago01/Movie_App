@@ -117,7 +117,7 @@
     <!-- Sorting toolbar -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <form action="{{ url_for('index') }}"
+            <form action="{{ url_for('user_movies', user_id=active_user.user_id) }}"
                   method="GET"
                   class="row g-3 align-items-end">
 
@@ -196,25 +196,18 @@
                                  style="position: absolute;bottom: 0;width: 180px;">
                                 {{ movie.movie_id }}
                                 <div class="btn-group btn-group-sm" role="group" aria-label="Basic Example">
-                                    <a href="{{ url_for('update_movie', movie_id=movie.movie_id) }}"
+                                    <a href="{{ url_for('update_user_movie', user_id=active_user.user_id, movie_id=movie.movie_id) }}"
                                        class="btn btn-outline-primary"
                                        title="Edit">
                                         ✏️
                                     </a>
-                                    <form action="{{ url_for('delete_movie') }}" method="POST">
-                                        <input type="hidden" name="movie_id" value="{{ movie.movie_id }}">
-
+                                    <form action="{{ url_for('delete_user_movie', user_id=active_user.user_id, movie_id=movie.movie_id) }}" method="POST">
                                         <button type="submit"
                                                 class="btn btn-outline-danger"
                                                 title="Delete">
                                             🗑
                                         </button>
                                     </form>
-<!--                                    <a href="{{ url_for('delete_movie', movie_id=movie.movie_id) }}"-->
-<!--                                       class="btn btn-outline-danger"-->
-<!--                                       title="Delete">-->
-<!--                                        🗑-->
-<!--                                    </a>-->
                                 </div>
                             </div>
                         </div>
