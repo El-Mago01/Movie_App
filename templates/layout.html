@@ -242,7 +242,7 @@
 
             if (response.ok) {
                 console.log("user_name_to_delete deleted successfully.");
-                window.location.reload();
+                window.location.href = response.url;
             } else {
                 document.documentElement.innerHTML = await response.text();
             }
