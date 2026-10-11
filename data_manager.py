@@ -353,6 +353,7 @@ class DataManager:
             db.session.add(new_movie)
             db.session.commit()
         except IntegrityError as e:
+            db.session.rollback()
             logging.info("Movie can not be stored due to error: %s", e)
             return new_movie, f"Movie can not be stored due to error: {e}"
         print("added movie:", new_movie)

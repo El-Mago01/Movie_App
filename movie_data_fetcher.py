@@ -34,7 +34,6 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
             if imdbID != "":  # the imdbID is the main search key
                 search_term = f"?apikey={api_key}&i={imdbID}"
                 url = BASE_URL + search_term
-                print(url)
 
             elif title != "":  # the title is the main search key
                 if len(title) < MIN_LENGTH_TITLE:
@@ -43,7 +42,6 @@ def fetch_movie_data(imdbID: str = "", title: str = "") -> dict:
                 title_search_term = "+".join(title_words)
                 search_term = f"?apikey={api_key}&s={title_search_term}"
                 url = BASE_URL + search_term
-                print(url)
             else:
                 # Should not occur. Either, imdbID or title must be provided
                 return ""
