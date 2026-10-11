@@ -7,6 +7,8 @@ of these requests by using the partners models and movie_data_fetcher.
 """
 import os
 from dotenv import load_dotenv
+
+load_dotenv()  # Load configuration before importing modules that use the OMDb API key
 from flask import Flask, request, render_template, redirect, url_for, abort, flash
 from data_manager import DataManager, db, logging
 
@@ -19,7 +21,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = (
 # app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data/db.sqlite3"
 db.init_app(app)
 
-load_dotenv()  # Load environment variables from .env file
 app.secret_key = os.getenv("SECRET_KEY")
 
 with app.app_context():
@@ -155,7 +156,7 @@ def add_user_movie(user_id):
     if "movie_title" in request.form and "director" not in request.form:
         requested_title = request.form.get("movie_title", "").strip()
         if not requested_title:
-            abort(404, description="Title cannot be empty")
+            abort(400, description="Title cannot be empty")
         found_movies = dm.fetch_matching_movies(requested_title)
         if not found_movies:
             flash(f"No movies found for title '{requested_title}'", "warning")
@@ -395,4 +396,4 @@ def bad_request(e):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)
